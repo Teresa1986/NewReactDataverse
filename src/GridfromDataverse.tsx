@@ -1,52 +1,87 @@
 import React, { useEffect, useState } from "react";
 
 const CONTACTS_API =
-  "https://orgaf98a21c.api.crm4.dynamics.com/api/data/v9.2/contacts?$select=firstname,lastname,createdon";
-const ACCESS_TOKEN =
-  "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IkNOdjBPSTNSd3FsSEZFVm5hb01Bc2hDSDJYRSIsImtpZCI6IkNOdjBPSTNSd3FsSEZFVm5hb01Bc2hDSDJYRSJ9.eyJhdWQiOiJodHRwczovL29yZ2FmOThhMjFjLmFwaS5jcm00LmR5bmFtaWNzLmNvbSIsImlzcyI6Imh0dHBzOi8vc3RzLndpbmRvd3MubmV0L2Q0YzIwMDJjLTU3NTItNDNlNy04NTRkLWZlMDBjYTBhMTgxYy8iLCJpYXQiOjE3NDg4NjkwOTMsIm5iZiI6MTc0ODg2OTA5MywiZXhwIjoxNzQ4ODcyOTkzLCJhaW8iOiJrMlJnWUxqSytUQ2plczBpdFNzU1A3NU0rMmxpQVFBPSIsImFwcGlkIjoiMWI4YzMyOTUtMmQwZC00MzBkLTg1NmQtNjg1YTE5ZWJmZjJiIiwiYXBwaWRhY3IiOiIxIiwiaWRwIjoiaHR0cHM6Ly9zdHMud2luZG93cy5uZXQvZDRjMjAwMmMtNTc1Mi00M2U3LTg1NGQtZmUwMGNhMGExODFjLyIsImlkdHlwIjoiYXBwIiwib2lkIjoiYmFmMjdhZDAtNzhkZi00ZDEzLWFhNjItYzc4OGVkY2IyODhmIiwicmgiOiIxLkFTOEFMQURDMUZKWDUwT0ZUZjRBeWdvWUhBY0FBQUFBQUFBQXdBQUFBQUFBQUFDd0FBQXZBQS4iLCJzdWIiOiJiYWYyN2FkMC03OGRmLTRkMTMtYWE2Mi1jNzg4ZWRjYjI4OGYiLCJ0ZW5hbnRfcmVnaW9uX3Njb3BlIjoiRVUiLCJ0aWQiOiJkNGMyMDAyYy01NzUyLTQzZTctODU0ZC1mZTAwY2EwYTE4MWMiLCJ1dGkiOiJqV1lreWgtaGRVU1VUelFVMHA4dEFBIiwidmVyIjoiMS4wIiwieG1zX2Z0ZCI6ImYtUmZObXphR3FaSlBiNDlsZ08xOWxoMFMwWmY1ell2RG9HLWRRZVlCRGdCWm5KaGJtTmxZeTFrYzIxeiIsInhtc19pZHJlbCI6IjEwIDciLCJ4bXNfcmQiOiIwLjQyTGxZQkppMUJjUzRXQVhFdGpJVVZscl9tYUx5OXdqcG45ZkxlSXFBSXB5Q2dud0wxOVFWUFd2MVdPNTFvT0gxcWtheTRHaUhFSUM3QXdRY0FCS0F3QSJ9.Jb_5UrqwdEy1ygcyCGFzpqjg7LGSFlrUg1xBFrcXZjMgIEw9jXgBO_xGTW66hCU1lOw1vDv6U1JkgSK6t8A_2YzO04ReVH9EVY03reoHzJog7ebs2eJpzbBzE3zBx9mb0gNbOzpfDNeAwnKy9ZHN3gWNI1Mms5j_Pprm3AoNuTt-k1PU_RNbopgZSc-Qf5As8u_1a5trD6S0y5WjR08O7_W5gKTlwgaKhriqsEIokk7Fxbr5Gz_Z143Uzit2KQG9ERl-OzIxL56fpxX030j-YXVDz1B8-WeCJAYOTc7sCA9IOFIFHutJSQNsYl-4eD8e3WYVBvfpOrOJSgHodCwTxA"; // Replace with your actual token
+  "https://prod-167.westeurope.logic.azure.com:443/workflows/0eef461979cc4b4ab40c5c1e4943e9b8/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=VTd318jljDIvdC9ntienXAr9DG8Sq5rhwexpU03sXTM";
 
 function ContactsGrid() {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true; // Prevent state updates if the component is unmounted
+
     fetch(CONTACTS_API, {
+      method: "POST",
       headers: {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        "Content-Type": "application/json",
         Accept: "application/json"
-      }
+      },
+      body: JSON.stringify({}) // Add any required payload here
     })
-      .then((res) => res.json())
-      .then((data) => {
-        // Sort by createdon descending (newest first)
-        const sorted = (data.value || []).sort(
-          (a, b) => new Date(b.createdon).getTime() - new Date(a.createdon).getTime()
-        );
-        setContacts(sorted);
-        setLoading(false);
+      .then((res) => {
+        if (!res.ok) {
+          return res.json().then((error) => {
+            console.error("API Error:", error);
+            throw new Error(`HTTP error! status: ${res.status}`);
+          });
+        }
+        return res.json();
       })
-      .catch(() => setLoading(false));
+      .then((data) => {
+        console.log("API Response:", data); // Log API response for debugging
+        if (isMounted) {
+          // Check if data is an array or has a value property
+          const contactsArray = Array.isArray(data) ? data : data.value || [];
+          console.log("Contacts Array:", contactsArray); // Log the extracted contacts array
+
+          const sorted = contactsArray.sort(
+            (a, b) => new Date(b.createdon).getTime() - new Date(a.createdon).getTime()
+          );
+          console.log("Sorted Contacts:", sorted); // Log sorted contacts
+          setContacts(sorted);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false; // Cleanup to prevent double execution
+    };
   }, []);
 
-  if (loading) return <div style={{ textAlign: "center", marginTop: 40, fontSize: 20 }}>Loading...</div>;
+  if (loading) return <div style={{ textAlign: "center", marginTop: 40, fontSize: 20 }}>Loading data, please wait...</div>;
+
+  if (error) return <div style={{ textAlign: "center", marginTop: 40, fontSize: 20, color: "red" }}>Error: {error}</div>;
 
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>First Name</th>
-          <th>Last Name</th>
-        </tr>
-      </thead>
-      <tbody>
-        {contacts.map((contact) => (
-          <tr key={contact.contactid || contact.firstname + contact.lastname}>
-            <td>{contact.firstname}</td>
-            <td>{contact.lastname}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div>
+      {contacts.length === 0 ? (
+        <div>No contacts available</div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>First Name</th>
+              <th>Last Name</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contacts.map((contact, index) => (
+              <tr key={contact.contactid || `${contact.firstname || "Unknown"}-${contact.lastname || "Unknown"}-${index}`}>
+                <td>{contact.firstname || "Unknown"}</td>
+                <td>{contact.lastname || "Unknown"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 }
 
